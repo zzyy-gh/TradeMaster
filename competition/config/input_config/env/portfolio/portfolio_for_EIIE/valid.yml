@@ -1,6 +1,6 @@
 df_path: data/train.csv
 initial_amount: 100000
-length_day: 5
+length_day: 3
 tech_indicator_list:
   - feature_0
   - feature_1
