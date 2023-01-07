@@ -49,8 +49,10 @@ parser.add_argument("--kernel_size",
 # since we do not have any market unit scoring data, we decide to use only the asset score part and therefore there is no part as risk-free process
 class Tradingenv(gym.Env):
     def __init__(self, config):
-        self.day = config["length_day"] - 1
+        self.lookback_period_days = 1000
         self.df = pd.read_csv(config["df_path"], index_col=0)
+        self.startday = len(self.df)/15 - self.lookback_period_days 
+        self.day = config["length_day"] - 1 + self.startday
         self.stock_dim = len(self.df.tic.unique())
         self.initial_amount = config["initial_amount"]
         self.transaction_cost_pct = config["transaction_cost_pct"]
