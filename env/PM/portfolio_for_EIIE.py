@@ -49,8 +49,8 @@ parser.add_argument("--kernel_size",
 # since we do not have any market unit scoring data, we decide to use only the asset score part and therefore there is no part as risk-free process
 class Tradingenv(gym.Env):
     def __init__(self, config):
-        self.lookback_period_days = 1000
         self.df = pd.read_csv(config["df_path"], index_col=0)
+        self.lookback_period_days = len(self.df)/15
         self.startday = len(self.df)/15 - self.lookback_period_days 
         self.day = config["length_day"] - 1 + self.startday
         self.stock_dim = len(self.df.tic.unique())
@@ -88,7 +88,7 @@ class Tradingenv(gym.Env):
         self.portfolio_value = self.initial_amount
         self.asset_memory = [self.initial_amount]
         self.portfolio_return_memory = [0]
-        self.weights_memory = [[1] + [0] * self.stock_dim]
+        self.weights_memory = [[0] * self.stock_dim]
         self.date_memory = [self.data.date.unique()[0]]
         self.transaction_cost_memory = []
 
@@ -106,8 +106,8 @@ class Tradingenv(gym.Env):
         self.portfolio_value = self.initial_amount
         self.asset_memory = [self.initial_amount]
         self.portfolio_return_memory = [0]
-        self.weights_memory = [[1 / (self.stock_dim + 1)] *
-                               (self.stock_dim + 1)]
+        self.weights_memory = [[1 / (self.stock_dim)] *
+                               (self.stock_dim )]
         self.date_memory = [self.data.date.unique()[0]]
         self.transaction_cost_memory = []
 
@@ -117,6 +117,8 @@ class Tradingenv(gym.Env):
         # make judgement about whether our data is running out
         self.terminal = self.day >= len(self.df.index.unique()) - 1
         weights = np.array(weights)
+        # print('weights: ', weights.shape)
+        # print('weightmemory: ',self.weights_memory)
 
         if self.terminal:
             tr, sharpe_ratio, vol, mdd, cr, sor = self.analysis_result()
@@ -143,17 +145,21 @@ class Tradingenv(gym.Env):
 
             # self.state = np.transpose(self.state, (2, 0, 1))
             new_price_memory = self.df.loc[self.day, :]
-            portfolio_weights = weights[1:]
+            portfolio_weights = weights[:]
             portfolio_return = sum(
                 ((new_price_memory.close.values / last_day_memory.close.values)
                  - 1) * portfolio_weights)
-            weights_brandnew = self.normalization([weights[0]] + list(
-                np.array(weights[1:]) *
+            weights_brandnew = self.normalization(list(
+                np.array(weights[:]) *
                 np.array((new_price_memory.close.values /
                           last_day_memory.close.values))))
+            # print('weightsbrandnes: ',len(weights_brandnew))
+            # print('weightsbrandnes: ',(weights_brandnew))
             self.weights_memory.append(weights_brandnew)
             weights_old = (self.weights_memory[-3])
             weights_new = (self.weights_memory[-2])
+            # print('old: ', weights_old)
+            # print('new: ', weights_new)
             diff_weights = np.sum(
                 np.abs(np.array(weights_old) - np.array(weights_new)))
             transcationfee = diff_weights * self.transaction_cost_pct * self.portfolio_value
